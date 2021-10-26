@@ -1,0 +1,69 @@
+import java.util.Scanner;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.TimeUnit;
+
+
+public class Kitchen implements  Runnable{
+    private final Lock lock = new ReentrantLock();
+    public static int noOfRoommates;
+    public Kitchen(int val)
+    {
+        this.noOfRoommates = val;
+    }
+
+    volatile static int milk = 1;
+
+    public int drinkMilkAndBuyIfNeeded() throws InterruptedException {
+        lock.lock();
+        while (milk==1)
+        {
+            //Waiting for roommate to drink milk
+            //System.out.println("----------FOR CHECK-------------");
+            System.out.println("Milk not drunk by roommate yet");
+            milk = (int)(Math.random()*2);
+        }
+        //Here milk value become 0 i.e. milk drunk by roommate
+        System.out.println("Roommate drunk milk and now go for buying milk");
+        milk = 1;
+        int copy = milk;
+        lock.unlock();
+        return copy;
+    }
+
+    @Override
+    public void run() {
+        //Each thread calling drinkMilkAndBuyIfNeeded() number of times in loop
+        for(int i = 0; i < 5; ++i) {
+            String s = null;
+            try {
+                s = (drinkMilkAndBuyIfNeeded() == 1) ? "Roommate brought milk" : "Roommate does not brought milk";
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            System.out.println(s);
+        }
+    }
+    public static void main(String[] args) throws InterruptedException{
+        Scanner scanner = new Scanner(System.in);
+        System.out.println("Enter number of trials: ");
+        int numberOfTrials = scanner.nextInt();
+        for(int n=0;n<numberOfTrials;++n)
+        {
+            System.out.println("Enter number of roommates for this Kitchen trial: ");
+            noOfRoommates = scanner.nextInt();
+            ExecutorService exec = Executors.newFixedThreadPool(3);
+            Kitchen kitchen = new Kitchen(noOfRoommates);
+            for(int i=0;i<noOfRoommates;++i)
+                exec.execute(kitchen);
+            if(!exec.isTerminated()) {
+                exec.shutdown();
+                exec.awaitTermination(5L,TimeUnit.SECONDS);
+            }
+            System.out.println();
+        }
+    }
+
+}
